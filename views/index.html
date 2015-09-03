@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv='Content-type' content='text/html; charset=utf-8'>
+    <title>Basic Example with JSX</title>
+    <link rel="stylesheet" href="../shared/css/base.css" />
+	<link rel="stylesheet" href="./css/tictactoe.css" />
+  </head>
+ 
+    <h1>Basic Example with JSX</h1>
+	<div id="container"></div>
+   
+    <script src="../../build/react.js"></script>
+    <script src="../../build/JSXTransformer.js"></script>
+	<script src="//cdnjs.cloudflare.com/ajax/libs/lodash.js/2.4.1/lodash.min.js"></script>
+	 <script src="//code.jquery.com/jquery-1.10.2.js"></script>
+    <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+   <body>
+
+   <script type="text/jsx">
+   	/** @jsx React.DOM */
+
+	var ShowHeader = React.createClass({
+		
+			render : function () {
+				return(
+				<div>
+					<div id="header">
+					{this.props.starsHeader}
+					</div>
+					<Stars stars={this.props.stars} updateHeader={this.props.updateHeader} />
+					<FiringBar properties={this.props.properties} moveFiringBar={this.props.moveFiringBar}/>
+				</div>
+				
+				);
+			}
+	});
+		
+	var FiringBar = React.createClass({
+			
+			componentWillMount : function () {
+				document.addEventListener("keydown", this.props.moveFiringBar, false);
+			},
+
+			render : function () {
+				return (
+				<div>
+					<div style={{left:this.props.properties.position}} className='turret' height={this.props.properties.height} width={this.props.properties.width} id="turret">&nbsp;
+				</div>
+				</div>
+				);
+			}
+	
+		});
+	
+	var Stars = React.createClass({
+		
+
+			componentDidMount: function() {
+				this.animate();
+			},
+
+			
+			
+			checkWin: function(e)
+			{
+				var filteredList  = _.where(this.props.stars, {fill:"red"});
+				if ((filteredList.length === 0) || (!filteredList))
+				{
+					return true;
+				}
+				
+				return false;
+			},
+			
+
+			render : function () {
+			//	console.log('in stars render')
+				var indx=0;
+				var cIndx;
+				return(
+			
+				<svg height="775px" viewBox = "0 0 200 200">
+				{this.props.stars.map(function (n) { 
+					indx++;
+					if (n.type === 'target')
+					{
+						return <circle cx = {n.x} cy = {n.y} r = "3" id={indx} fill = {n.fill}/>; 
+					}
+					
+					if (n.type === 'bullet')
+					{
+						return <circle cx = {n.x} cy = {n.y} r = "3" id={indx} fill = {n.fill}/>; 
+					}
+				})}
+				 </svg>
+				);
+			},
+			
+			reanimate : function (state)
+			{
+				var indx = 0;
+				var wprops = this.props.stars;
+				var bullets = [];
+				this.props.stars.map(function (n) {
+					if (n.type === 'target')
+					{
+					wprops[indx].x = n.x + 0.05;
+					wprops[indx].y = n.y + 0.05;
+
+					if (wprops[indx].x > 200) {
+						wprops[indx].x = 0;
+					}
+					if (wprops[indx].y > 200) {
+						wprops[indx].y = 0; 
+					}
+					}
+					
+					if (n.type === 'bullet') {
+						wprops[indx].y = n.y - 0.5;  
+						if (wprops[indx].y < 0) {
+							wprops[indx] = wprops.splice(indx, 1);
+						}
+					
+
+					}
+					indx++;
+				})
+				
+				//Check Hits//
+					indx = 0;
+					var indx2 = 0;
+					wprops.map(function (n) {  
+						//Move Targets//
+						if (n.type === 'bullet') {
+							indx2 = 0;
+							wprops.map(function (j) {
+								//Move Targets//
+								if (j.type === 'target') {
+
+									var d = Math.sqrt(((j.x - n.x) * (j.x - n.x)) + ((j.y - n.y) * (j.y - n.y)));
+									if (d < 5) {
+										
+										wprops[indx] = wprops.splice(indx, 1);
+										wprops[indx2] = wprops.splice(indx2, 1);
+									}
+								}
+								indx2++;
+
+							});
+
+						}
+
+						indx++;
+
+					});
+				
+				
+				
+				
+				
+				state.setState({
+					stars : wprops
+				});
+				
+				if (this.checkWin()) {
+						this.props.updateHeader('You Win!!');
+					}
+			},
+				
+			animate : function () {
+				setInterval(this.reanimate, 1, this);
+			}
+			
+			
+		});
+	
+	
+	var StarFieldApp = React.createClass({ 
+		
+	
+		getInitialState : function () {
+			var items = [];
+			var stars = [];
+			var youOrMe = Math.floor((Math.random() * 2) + 0);
+			if (youOrMe == '0'){
+				items[Math.floor((Math.random() * 8) + 0)] = 'X';
+			}
+			
+			for (var i = 0; i < 5; i++) {
+				for (var z = 1; z < 5; z++) {
+					
+					x = z * 10;
+						y = i * 10;
+						stars.push({
+							"x" : x,
+							"y" : y,
+							"type" : 'target',
+							'fill' : 'red'
+						});
+				}
+			}
+			
+			return {
+				scores : [],
+				items : items,
+				stars : stars,
+				message : '',
+				winner:'',
+				barx:'',
+				bary:'',
+				starsHeader:'',
+				position: 0,
+				shots : []
+				
+			};
+		},
+		
+		updateHeader: function(text){
+			this.setState({starsHeader:text});
+		},
+		
+		
+		
+		fireShot : function (position) {
+			var x = $('#turret').attr('style');
+			var posX = x.split(":");
+			console.log(position * .27);
+			var stars = this.state.stars;
+			stars.push({
+				"x" : (position * .27),
+				"y" : 200,
+				"type" : 'bullet',
+				'fill' : 'blue'
+			});
+			this.setState({stars:stars}); 
+		},
+		
+	
+		moveFiringBar : function (e) {
+
+			var position = this.state.position;
+			
+			
+			if (e.keyCode == '39') {
+				
+					position = position + 5;
+					this.setState({position : position});
+				}
+
+				if (e.keyCode == '37') {
+					position = position - 5;
+					this.setState({position : position});
+				}
+
+				if (e.keyCode == '32') {
+					this.fireShot(position);
+				};
+
+			},
+		
+		
+		
+	  render: function() {
+		return (
+		 <div style={{width: '775px;', border: '1px solid red', background:'white'}}>
+			<ShowHeader properties={this.state} stars={this.state.stars} starsHeader={this.state.starsHeader} updateHeader={this.updateHeader} moveFiringBar={this.moveFiringBar}/>
+		</div>
+		);
+	  }
+	 
+	});
+	
+	React.render(<StarFieldApp/>, document.body);
+	
+	
+    </script>
+  </body>
